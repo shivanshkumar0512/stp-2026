@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+@layer utilities {
+    .animate-fade-in-up {
+        animation: fadeInUp 1s ease-out;
+    }
+
+    .slide-enter {
+        animation: slideEnter 1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+
+    .slide-exit {
+        animation: slideExit 1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+
+    .slide-smooth {
+        transition: all 1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+
+    /* Ultra-smooth slide transition */
+    .slide-ultra-smooth {
+        transition: transform 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.8s ease-out;
+    }
+
+    /* Modern glassmorphism button */
+    .btn-glass {
+        @apply backdrop-blur-md bg-white/10 border border-white/20 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 hover:bg-white/20 hover:scale-105 hover:shadow-lg hover:shadow-white/25;
+    }
+
+    /* Enhanced gradient button */
+    .btn-gradient-enhanced {
+        @apply bg-gradient-to-r from-blue-500 via-blue-600 to-purple-600 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 hover:from-blue-600 hover:via-blue-700 hover:to-purple-700 hover:scale-105 hover:shadow-xl hover:shadow-blue-500/25;
+    }
+
+    /* Modern navigation arrow */
+    .nav-arrow-modern {
+        @apply absolute z-20 w-14 h-14 bg-white/10 backdrop-blur-md border border-white/20 rounded-full flex items-center justify-center text-white transition-all duration-300 hover:bg-white/20 hover:scale-110 hover:shadow-lg;
+    }
+
+    /* Modern slide indicator */
+    .slide-indicator-modern {
+        @apply w-3 h-3 rounded-full transition-all duration-300 cursor-pointer;
+    }
+
+    .slide-indicator-modern.active {
+        @apply w-8 bg-white scale-125 shadow-lg;
+    }
+
+    .slide-indicator-modern.inactive {
+        @apply bg-white/50 hover:bg-white/75 hover:scale-110;
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideEnter {
+    from {
+        opacity: 0;
+        transform: translateX(100%) scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes slideExit {
+    from {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateX(-100%) scale(0.9);
+    }
+}
+
+/* Enhanced slide transition keyframes */
+@keyframes slideSmooth {
+    0% {
+        opacity: 0.7;
+        transform: translateX(100%) scale(0.95);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+/* Custom easing for ultra-smooth transitions */
+.smooth-transition {
+    transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ultra-smooth {
+    transition: all 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Modern button hover effects */
+.btn-hover-lift {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-hover-lift:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
