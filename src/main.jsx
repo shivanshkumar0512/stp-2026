@@ -7,6 +7,7 @@ import Home from './components/Home/Home.jsx'
 import About from './components/About/About.jsx'
 import Contact from './components/Contact/Contact.jsx'
 import Services from './components/Services/Services.jsx'
+import AITools from './components/AITools/AITools.jsx'
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -15,6 +16,7 @@ const router = createBrowserRouter(
       <Route path='about' element={<About />} />
       <Route path='contact' element={<Contact />} />
       <Route path='services' element={<Services />} />
+      <Route path='ai-tools' element={<AITools />} />
     </Route>
   )
 )

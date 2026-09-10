@@ -10,3 +10,30 @@ Currently, two official plugins are available:
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+
+## AI Features
+
+This site includes three AI-powered features backed by a single Vercel serverless function (`api/ai.js`):
+
+- **AI Chatbot** (floating widget, bottom-right on every page) — answers visitor questions about IMRI's services.
+- **AI Research Brief Generator** (`/ai-tools`) — drafts a market research brief from a short business description.
+- **AI Survey Question Generator** (`/ai-tools`) — drafts a survey/interview questionnaire for a given topic.
+
+### Enabling live AI responses
+
+By default (no API key configured) these features run in a **demo mode** using built-in rule-based
+responses, so they work immediately after deployment. To enable real generative AI responses:
+
+1. Get an API key from [console.anthropic.com](https://console.anthropic.com).
+2. In your Vercel project, go to **Settings → Environment Variables** and add:
+   - `ANTHROPIC_API_KEY` = your key
+3. Redeploy. The `/api/ai` function automatically switches to live AI responses once the key is present.
+
+For local development with the API route, copy `.env.example` to `.env` and run `vercel dev` (the Vercel CLI)
+instead of `vite dev`, since `vite dev` alone does not execute the `/api` serverless functions.
+
+### Deploying to Vercel
+
+This is a standard Vite SPA with a serverless `/api` function — no special configuration needed beyond the
+`vercel.json` already in this repo, which routes `/api/*` to the serverless function and everything else to
+the SPA. Just import the repo into Vercel (framework preset: Vite) and deploy.

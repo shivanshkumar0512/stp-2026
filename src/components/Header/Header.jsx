@@ -71,6 +71,18 @@ export default function Header() {
                                     Contact
                                 </NavLink>
                             </li>
+                            <li>
+                                <NavLink
+                                    to="/ai-tools"
+                                    className={({ isActive }) =>
+                                        `text-sm font-medium transition-colors duration-200 ${
+                                            isActive ? "text-blue-600" : "text-gray-700 hover:text-blue-600"
+                                        }`
+                                    }
+                                >
+                                    AI Tools
+                                </NavLink>
+                            </li>
                         </ul>
                         <Link
                             to="/contact"
@@ -144,6 +156,17 @@ export default function Header() {
                                 }
                             >
                                 Contact
+                            </NavLink>
+                            <NavLink
+                                to="/ai-tools"
+                                onClick={() => setIsMenuOpen(false)}
+                                className={({ isActive }) =>
+                                    `text-sm font-medium transition-colors duration-200 ${
+                                        isActive ? "text-blue-600" : "text-gray-700 hover:text-blue-600"
+                                    }`
+                                }
+                            >
+                                AI Tools
                             </NavLink>
                             <Link
                                 to="/contact"
