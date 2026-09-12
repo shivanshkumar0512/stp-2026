@@ -14,7 +14,9 @@ If you are developing a production application, we recommend using TypeScript wi
 ## AI Features
 
 This site includes four AI-powered features. The chat/brief/survey tools share one Vercel serverless function
-(`api/ai.js`); the news feed has its own (`api/news.js`):
+(`api/ai.js`); the news feed has its own (`api/news.js`). This section is a quick overview — see
+**[AI_FEATURES.md](./AI_FEATURES.md)** for the full technical reference (request/response shapes, exact limits,
+demo-mode fallback behavior, and how to extend each feature).
 
 - **AI Chatbot** (floating widget, bottom-right on every page) — answers visitor questions about IMRI's services,
   and can analyze uploaded files/images (see below).
