@@ -8,6 +8,7 @@ import About from './components/About/About.jsx'
 import Contact from './components/Contact/Contact.jsx'
 import Services from './components/Services/Services.jsx'
 import AITools from './components/AITools/AITools.jsx'
+import News from './components/News/News.jsx'
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -17,6 +18,7 @@ const router = createBrowserRouter(
       <Route path='contact' element={<Contact />} />
       <Route path='services' element={<Services />} />
       <Route path='ai-tools' element={<AITools />} />
+      <Route path='ai-news' element={<News />} />
     </Route>
   )
 )

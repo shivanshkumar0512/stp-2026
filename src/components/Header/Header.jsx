@@ -83,6 +83,18 @@ export default function Header() {
                                     AI Tools
                                 </NavLink>
                             </li>
+                            <li>
+                                <NavLink
+                                    to="/ai-news"
+                                    className={({ isActive }) =>
+                                        `text-sm font-medium transition-colors duration-200 ${
+                                            isActive ? "text-blue-600" : "text-gray-700 hover:text-blue-600"
+                                        }`
+                                    }
+                                >
+                                    AI News
+                                </NavLink>
+                            </li>
                         </ul>
                         <Link
                             to="/contact"
@@ -167,6 +179,17 @@ export default function Header() {
                                 }
                             >
                                 AI Tools
+                            </NavLink>
+                            <NavLink
+                                to="/ai-news"
+                                onClick={() => setIsMenuOpen(false)}
+                                className={({ isActive }) =>
+                                    `text-sm font-medium transition-colors duration-200 ${
+                                        isActive ? "text-blue-600" : "text-gray-700 hover:text-blue-600"
+                                    }`
+                                }
+                            >
+                                AI News
                             </NavLink>
                             <Link
                                 to="/contact"

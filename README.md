@@ -13,12 +13,25 @@ If you are developing a production application, we recommend using TypeScript wi
 
 ## AI Features
 
-This site includes three AI-powered features backed by a single Vercel serverless function (`api/ai.js`):
+This site includes four AI-powered features. The chat/brief/survey tools share one Vercel serverless function
+(`api/ai.js`); the news feed has its own (`api/news.js`):
 
 - **AI Chatbot** (floating widget, bottom-right on every page) — answers visitor questions about IMRI's services,
   and can analyze uploaded files/images (see below).
 - **AI Research Brief Generator** (`/ai-tools`) — drafts a market research brief from a short business description.
 - **AI Survey Question Generator** (`/ai-tools`) — drafts a survey/interview questionnaire for a given topic.
+- **AI News Feed** (`/ai-news`) — a filterable feed of recent AI/technology/startup/business/market headlines.
+
+### AI News Feed
+
+`/ai-news` fetches headlines via [NewsAPI.org](https://newsapi.org) when `NEWS_API_KEY` is set, filtered server-side
+by category (All, AI, Technology, Startups, Business, Markets — the pills above the feed). Each card shows an
+image (falls back to a category-colored icon if missing or broken), title, summary, source, publish date, and a
+link to the original article. When `ANTHROPIC_API_KEY` is also set, article summaries are condensed to one
+sentence each via a single batched Claude call; otherwise the source's own description is used as-is. Without
+`NEWS_API_KEY`, the feed falls back to a small curated demo dataset (same live/demo pattern as `api/ai.js`) so the
+page always has something to show. The page also has its own loading (skeleton cards), empty, and error (with
+retry) states.
 
 ### Chatbot file & image uploads
 
@@ -36,7 +49,10 @@ responses, so they work immediately after deployment. To enable real generative 
 1. Get an API key from [console.anthropic.com](https://console.anthropic.com).
 2. In your Vercel project, go to **Settings → Environment Variables** and add:
    - `ANTHROPIC_API_KEY` = your key
-3. Redeploy. The `/api/ai` function automatically switches to live AI responses once the key is present.
+   - `NEWS_API_KEY` = your key from [newsapi.org](https://newsapi.org/register) (optional — enables live headlines
+     for the AI News Feed; the feed works without it, using demo data)
+3. Redeploy. The `/api/ai` and `/api/news` functions automatically switch to live responses once the relevant key
+   is present.
 
 For local development with the API route, copy `.env.example` to `.env` and run `vercel dev` (the Vercel CLI)
 instead of `vite dev`, since `vite dev` alone does not execute the `/api` serverless functions.
