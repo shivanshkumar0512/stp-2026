@@ -15,9 +15,18 @@ If you are developing a production application, we recommend using TypeScript wi
 
 This site includes three AI-powered features backed by a single Vercel serverless function (`api/ai.js`):
 
-- **AI Chatbot** (floating widget, bottom-right on every page) — answers visitor questions about IMRI's services.
+- **AI Chatbot** (floating widget, bottom-right on every page) — answers visitor questions about IMRI's services,
+  and can analyze uploaded files/images (see below).
 - **AI Research Brief Generator** (`/ai-tools`) — drafts a market research brief from a short business description.
 - **AI Survey Question Generator** (`/ai-tools`) — drafts a survey/interview questionnaire for a given topic.
+
+### Chatbot file & image uploads
+
+The chatbot's attach button (paperclip icon) accepts PDF, DOCX, TXT, CSV, JPG, PNG and WEBP files — up to 4 files
+and 3 MB per message combined. Images are sent to Claude's vision input for direct analysis; PDFs are sent as
+native documents; DOCX/TXT/CSV are text-extracted server-side (via `mammoth` for DOCX) and passed to the model as
+context. Limits are sized to stay under Vercel's fixed 4.5 MB Serverless Function request-body cap. In demo mode
+(no API key), the bot acknowledges attached files but can't analyze them until `ANTHROPIC_API_KEY` is set.
 
 ### Enabling live AI responses
 

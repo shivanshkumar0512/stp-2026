@@ -1,15 +1,25 @@
 // Vercel serverless function: /api/ai
 // Powers three AI features for the IMRI site:
-//   mode "chat"   -> AI chatbot answers about IMRI's services
+//   mode "chat"   -> AI chatbot answers about IMRI's services (supports file/image attachments)
 //   mode "brief"  -> AI-generated market research brief/proposal
 //   mode "survey" -> AI-generated survey questionnaire
 //
-// Uses the Anthropic Messages API when ANTHROPIC_API_KEY is configured in the
+// Uses the official Anthropic SDK when ANTHROPIC_API_KEY is configured in the
 // Vercel project's environment variables. Falls back to a deterministic,
 // rule-based generator when no key is set, so the features work out of the
 // box in a demo/preview deployment too.
 
-const ANTHROPIC_MODEL = 'claude-haiku-4-5-20251001';
+import Anthropic from '@anthropic-ai/sdk';
+import mammoth from 'mammoth';
+import {
+  resolveAttachmentType,
+  formatBytes,
+  MAX_FILE_SIZE_BYTES,
+  MAX_TOTAL_SIZE_BYTES,
+  MAX_FILES_PER_MESSAGE,
+} from '../src/lib/attachments.js';
+
+const ANTHROPIC_MODEL = 'claude-haiku-4-5';
 
 const COMPANY_CONTEXT = `You are the AI assistant for Intact Market Research India Pvt. Ltd. (IMRI / "Intact Research"),
 an independent market research agency founded in 2015, headquartered at 3rd Floor, D-2, Railway Road Samaipur,
@@ -26,31 +36,20 @@ across 100+ Indian cities.
 
 Answer questions concisely (2-5 sentences), in a helpful, professional tone, and steer users toward requesting a
 quote via the Contact page when relevant. If asked something unrelated to market research or IMRI, answer briefly
-and helpfully but bring the conversation back to how IMRI could help.`;
+and helpfully but bring the conversation back to how IMRI could help. Users may attach documents (PDF/DOCX/TXT/CSV)
+or images (JPG/PNG/WEBP) — their content is provided to you inline; analyze it and answer questions about it
+directly, as you would for any other market research material.`;
 
 async function callAnthropic(apiKey, system, messages, maxTokens = 700) {
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: ANTHROPIC_MODEL,
-      max_tokens: maxTokens,
-      system,
-      messages,
-    }),
+  const client = new Anthropic({ apiKey });
+  const response = await client.messages.create({
+    model: ANTHROPIC_MODEL,
+    max_tokens: maxTokens,
+    system,
+    messages,
   });
 
-  if (!response.ok) {
-    const errText = await response.text().catch(() => '');
-    throw new Error(`Anthropic API error ${response.status}: ${errText}`);
-  }
-
-  const data = await response.json();
-  return (data.content || [])
+  return (response.content || [])
     .filter((block) => block.type === 'text')
     .map((block) => block.text)
     .join('\n')
@@ -61,9 +60,99 @@ function clean(str, fallback = '') {
   return typeof str === 'string' ? str.trim().slice(0, 2000) : fallback;
 }
 
+// ---------- Attachments (chat mode only) ----------
+
+class AttachmentError extends Error {}
+
+function decodeBase64(data) {
+  const str = typeof data === 'string' ? data : '';
+  const commaIndex = str.indexOf(',');
+  const raw = str.startsWith('data:') && commaIndex !== -1 ? str.slice(commaIndex + 1) : str;
+  return Buffer.from(raw, 'base64');
+}
+
+function formatExtractedText(name, text) {
+  const trimmed = (text || '').trim().slice(0, 20000);
+  return `--- Content of attached file "${name}" ---\n${trimmed || '(no extractable text found)'}\n--- end of "${name}" ---`;
+}
+
+// Turns the client's raw attachment payloads ({ name, data (base64) }) into
+// Anthropic content blocks. Images and PDFs are passed natively (native PDF
+// understanding covers "extract the text"); DOCX/TXT/CSV are extracted to
+// plain text server-side and appended as a text block, since the Messages
+// API does not accept those as document blocks directly.
+async function buildAttachmentContent(attachments, caption) {
+  if (attachments.length > MAX_FILES_PER_MESSAGE) {
+    throw new AttachmentError(`You can attach up to ${MAX_FILES_PER_MESSAGE} files per message.`);
+  }
+
+  const blocks = [];
+  const textSections = [];
+  let totalBytes = 0;
+
+  for (const att of attachments) {
+    const name = clean(att && att.name, 'file') || 'file';
+    const type = resolveAttachmentType(name);
+    if (!type) {
+      throw new AttachmentError(`"${name}" has an unsupported file type. Allowed: PDF, DOCX, TXT, CSV, JPG, PNG, WEBP.`);
+    }
+
+    const buffer = decodeBase64(att && att.data);
+    if (buffer.length === 0) {
+      throw new AttachmentError(`"${name}" could not be read — it may be empty or corrupted.`);
+    }
+    if (buffer.length > MAX_FILE_SIZE_BYTES) {
+      throw new AttachmentError(`"${name}" is too large (max ${formatBytes(MAX_FILE_SIZE_BYTES)} per file).`);
+    }
+
+    totalBytes += buffer.length;
+    if (totalBytes > MAX_TOTAL_SIZE_BYTES) {
+      throw new AttachmentError(`Attachments are too large overall (max ${formatBytes(MAX_TOTAL_SIZE_BYTES)} combined per message).`);
+    }
+
+    if (type.kind === 'image') {
+      blocks.push({
+        type: 'image',
+        source: { type: 'base64', media_type: type.mediaType, data: buffer.toString('base64') },
+      });
+    } else if (type.mediaType === 'application/pdf') {
+      blocks.push({
+        type: 'document',
+        source: { type: 'base64', media_type: 'application/pdf', data: buffer.toString('base64') },
+      });
+    } else if (type.ext === '.docx') {
+      let text;
+      try {
+        ({ value: text } = await mammoth.extractRawText({ buffer }));
+      } catch {
+        throw new AttachmentError(`"${name}" could not be read as a Word document.`);
+      }
+      textSections.push(formatExtractedText(name, text));
+    } else {
+      // .txt / .csv
+      textSections.push(formatExtractedText(name, buffer.toString('utf-8')));
+    }
+  }
+
+  const combinedText = [caption, ...textSections].filter(Boolean).join('\n\n') ||
+    'Please analyze the attached file(s) and summarize what you find.';
+
+  return [...blocks, { type: 'text', text: combinedText }];
+}
+
 // ---------- Fallback (no API key) generators ----------
 
-function fallbackChat(userMessage) {
+function fallbackChat(userMessage, attachmentNames = []) {
+  if (attachmentNames.length > 0) {
+    const list = attachmentNames.join(', ');
+    return (
+      `I can see you've attached ${attachmentNames.length > 1 ? 'files' : 'a file'} (${list}), but this deployment ` +
+      "is running in demo mode without an AI key configured, so I can't analyze attachments yet. Once " +
+      'ANTHROPIC_API_KEY is set in the Vercel project, I\'ll be able to read and answer questions about uploaded ' +
+      'documents and images directly.'
+    );
+  }
+
   const msg = userMessage.toLowerCase();
   const faq = [
     {
@@ -208,24 +297,51 @@ export default async function handler(req, res) {
   try {
     if (mode === 'chat') {
       const incoming = Array.isArray(body.messages) ? body.messages : [];
-      const messages = incoming
-        .filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
-        .slice(-12)
-        .map((m) => ({ role: m.role, content: clean(m.content, '') }));
+      const trimmed = incoming.filter((m) => m && (m.role === 'user' || m.role === 'assistant')).slice(-12);
 
-      if (messages.length === 0) {
+      if (trimmed.length === 0) {
         res.status(400).json({ error: 'messages array is required' });
         return;
       }
 
+      // Only the most recent message may carry attachments — that's the turn
+      // the user just sent. Earlier turns are resent as plain text on every
+      // request (the API is stateless), so we never re-upload old files.
+      const lastIndex = trimmed.length - 1;
+      let attachmentNames = [];
+      let messages;
+
+      try {
+        messages = await Promise.all(
+          trimmed.map(async (m, i) => {
+            const text = clean(m.content, '');
+            const attachments = i === lastIndex && Array.isArray(m.attachments) ? m.attachments : [];
+
+            if (attachments.length === 0) {
+              return { role: m.role, content: text };
+            }
+
+            attachmentNames = attachments.map((a) => clean(a && a.name, 'file') || 'file');
+            const content = await buildAttachmentContent(attachments, text);
+            return { role: m.role, content };
+          })
+        );
+      } catch (err) {
+        if (err instanceof AttachmentError) {
+          res.status(400).json({ error: err.message });
+          return;
+        }
+        throw err;
+      }
+
       if (apiKey) {
-        const reply = await callAnthropic(apiKey, COMPANY_CONTEXT, messages, 500);
+        const reply = await callAnthropic(apiKey, COMPANY_CONTEXT, messages, 800);
         res.status(200).json({ result: reply, mode: 'live' });
         return;
       }
 
-      const lastUser = [...messages].reverse().find((m) => m.role === 'user');
-      res.status(200).json({ result: fallbackChat(lastUser ? lastUser.content : ''), mode: 'demo' });
+      const lastUserText = clean(trimmed[lastIndex].content, '');
+      res.status(200).json({ result: fallbackChat(lastUserText, attachmentNames), mode: 'demo' });
       return;
     }
 
